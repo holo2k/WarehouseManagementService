@@ -21,6 +21,15 @@ public sealed class ProductsController : ControllerBase
         _sender = sender;
     }
 
+    /// <summary>
+    /// Получить список товаров с опциональной фильтрацией и пагинацией.
+    /// </summary>
+    /// <param name="status">Фильтр по статусу товара.</param>
+    /// <param name="categoryId">Фильтр по идентификатору категории.</param>
+    /// <param name="page">Номер страницы, начиная с 1.</param>
+    /// <param name="pageSize">Размер страницы. Максимум 100.</param>
+    /// <param name="cancellationToken">Токен отмены запроса.</param>
+    /// <returns>Страница товаров.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<ProductDto>>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
@@ -38,6 +47,12 @@ public sealed class ProductsController : ControllerBase
         return Ok(ApiResponse<PagedResult<ProductDto>>.Ok(result.Value));
     }
 
+    /// <summary>
+    /// Получить товар по идентификатору.
+    /// </summary>
+    /// <param name="id">Идентификатор товара.</param>
+    /// <param name="cancellationToken">Токен отмены запроса.</param>
+    /// <returns>Товар с указанным идентификатором.</returns>
     [HttpGet("{id:int}")]
     [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
@@ -50,13 +65,19 @@ public sealed class ProductsController : ControllerBase
         return Ok(ApiResponse<ProductDto>.Ok(result.Value));
     }
 
+    /// <summary>
+    /// Создать новый товар.
+    /// </summary>
+    /// <param name="request">Данные нового товара.</param>
+    /// <param name="cancellationToken">Токен отмены запроса.</param>
+    /// <returns>Созданный товар.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<ProductDto>>> Create(
-        CreateProductRequest request,
+        [FromBody] CreateProductRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new CreateProductCommand(request), cancellationToken);
@@ -64,6 +85,17 @@ public sealed class ProductsController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, ApiResponse<ProductDto>.Ok(result.Value));
     }
 
+    /// <summary>
+    /// Изменить статус товара.
+    /// </summary>
+    /// <remarks>
+    /// Допустимые переходы: Active -> Defective, Defective -> WriteOff.
+    /// Повторная установка текущего статуса считается идемпотентной операцией.
+    /// </remarks>
+    /// <param name="id">Идентификатор товара.</param>
+    /// <param name="request">Новый статус товара.</param>
+    /// <param name="cancellationToken">Токен отмены запроса.</param>
+    /// <returns>Товар с обновленным статусом.</returns>
     [HttpPatch("{id:int}/status")]
     [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
@@ -72,7 +104,7 @@ public sealed class ProductsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<ApiResponse<ProductDto>>> ChangeStatus(
         int id,
-        ChangeProductStatusRequest request,
+        [FromBody] ChangeProductStatusRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _sender.Send(

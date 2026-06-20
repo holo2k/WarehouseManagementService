@@ -18,6 +18,11 @@ public sealed class CategoriesController : ControllerBase
         _sender = sender;
     }
 
+    /// <summary>
+    /// Получить список всех категорий товаров.
+    /// </summary>
+    /// <param name="cancellationToken">Токен отмены запроса.</param>
+    /// <returns>Список категорий.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyCollection<CategoryDto>>), StatusCodes.Status200OK)]
     public async Task<ActionResult<ApiResponse<IReadOnlyCollection<CategoryDto>>>> GetAll(
@@ -28,12 +33,18 @@ public sealed class CategoriesController : ControllerBase
         return Ok(ApiResponse<IReadOnlyCollection<CategoryDto>>.Ok(result.Value));
     }
 
+    /// <summary>
+    /// Создать новую категорию товара.
+    /// </summary>
+    /// <param name="request">Данные новой категории.</param>
+    /// <param name="cancellationToken">Токен отмены запроса.</param>
+    /// <returns>Созданная категория.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<CategoryDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<CategoryDto>>> Create(
-        CreateCategoryRequest request,
+        [FromBody] CreateCategoryRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new CreateCategoryCommand(request), cancellationToken);

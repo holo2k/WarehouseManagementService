@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Mvc;
 using WarehouseManagementService.Application;
@@ -41,7 +42,12 @@ public static class ServiceBuilderExtensions
         });
 
         services.AddEndpointsApiExplorer();
-        services.AddSwaggerGen();
+        services.AddSwaggerGen(options =>
+        {
+            var xmlFileName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+            var xmlFilePath = Path.Combine(AppContext.BaseDirectory, xmlFileName);
+            options.IncludeXmlComments(xmlFilePath);
+        });
 
         services.AddApplication();
         services.AddInfrastructure(configuration);
