@@ -1,8 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using WarehouseManagementService.Api.Middleware;
 using WarehouseManagementService.Application.Common.Models;
 using WarehouseManagementService.Infrastructure.Persistence;
-using WarehouseManagementService.Infrastructure.Persistence.Seed;
+using WarehouseManagementService.Infrastructure.Persistence.Initializer;
 
 namespace WarehouseManagementService.Api.Bootstrap;
 
@@ -26,7 +25,7 @@ public static class ApplicationBuilderExtensions
     {
         using var scope = app.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        
+
         await DbInitializer.InitializeAsync(dbContext);
     }
 

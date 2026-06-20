@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using WarehouseManagementService.Domain.Entities;
 using WarehouseManagementService.Domain.Enums;
 
-namespace WarehouseManagementService.Infrastructure.Persistence.Seed;
+namespace WarehouseManagementService.Infrastructure.Persistence.Initializer;
 
 public static class DbInitializer
 {
@@ -14,13 +14,18 @@ public static class DbInitializer
 
     private static async Task SeedData(AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        if (!await dbContext.Categories.AnyAsync(cancellationToken))
-        {
-            dbContext.Categories.AddRange(
-                new Category("Телевизоры"),
-                new Category("Смартфоны"),
-                new Category("Ноутбуки"));
+        var existingCategoryNames = await dbContext.Categories
+            .Select(category => category.Name)
+            .ToListAsync(cancellationToken);
 
+        var categoriesToAdd = new[] { "Телевизоры", "Смартфоны", "Ноутбуки" }
+            .Except(existingCategoryNames)
+            .Select(name => new Category(name))
+            .ToArray();
+
+        if (categoriesToAdd.Length > 0)
+        {
+            dbContext.Categories.AddRange(categoriesToAdd);
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
