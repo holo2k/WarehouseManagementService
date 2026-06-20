@@ -1,0 +1,45 @@
+using WarehouseManagementService.Domain.Entities;
+using WarehouseManagementService.Domain.Enums;
+
+namespace WarehouseManagementService.Tests;
+
+public sealed class ProductStatusTests
+{
+    [Fact]
+    public void ChangeStatus_Allows_Active_To_Defective()
+    {
+        var product = new Product("Phone", "SKU-1", 1, ProductStatus.Active);
+
+        product.ChangeStatus(ProductStatus.Defective);
+
+        Assert.Equal(ProductStatus.Defective, product.Status);
+    }
+
+    [Fact]
+    public void ChangeStatus_Allows_Defective_To_WriteOff()
+    {
+        var product = new Product("Phone", "SKU-1", 1, ProductStatus.Defective);
+
+        product.ChangeStatus(ProductStatus.WriteOff);
+
+        Assert.Equal(ProductStatus.WriteOff, product.Status);
+    }
+
+    [Fact]
+    public void ChangeStatus_Rejects_Active_To_WriteOff()
+    {
+        var product = new Product("Phone", "SKU-1", 1, ProductStatus.Active);
+
+        Assert.Throws<InvalidOperationException>(() => product.ChangeStatus(ProductStatus.WriteOff));
+    }
+
+    [Fact]
+    public void ChangeStatus_Is_Idempotent_For_Same_Status()
+    {
+        var product = new Product("Phone", "SKU-1", 1, ProductStatus.Active);
+
+        product.ChangeStatus(ProductStatus.Active);
+
+        Assert.Equal(ProductStatus.Active, product.Status);
+    }
+}
