@@ -11,7 +11,7 @@ public sealed class Product
     public Product(string name, string sku, int categoryId, ProductStatus status)
     {
         Name = name.Trim();
-        Sku = sku.Trim();
+        Sku = NormalizeSku(sku);
         CategoryId = categoryId;
         Status = status;
     }
@@ -27,6 +27,11 @@ public sealed class Product
     public Category? Category { get; private set; }
 
     public ProductStatus Status { get; private set; }
+
+    public static string NormalizeSku(string sku)
+    {
+        return sku.Trim().ToUpperInvariant();
+    }
 
     public bool CanChangeStatus(ProductStatus newStatus)
     {

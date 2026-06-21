@@ -30,7 +30,7 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
         CancellationToken cancellationToken)
     {
         var productRequest = request.Request;
-        var normalizedSku = productRequest.Sku.Trim();
+        var normalizedSku = Product.NormalizeSku(productRequest.Sku);
         var skuExists = await _productRepository.ExistsBySkuAsync(normalizedSku, cancellationToken);
 
         if (skuExists)
