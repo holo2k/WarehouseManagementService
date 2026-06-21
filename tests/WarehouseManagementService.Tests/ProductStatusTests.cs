@@ -6,6 +6,14 @@ namespace WarehouseManagementService.Tests;
 public sealed class ProductStatusTests
 {
     [Fact]
+    public void Constructor_Normalizes_Sku()
+    {
+        var product = new Product("Phone", " sku-1 ", 1, ProductStatus.Active);
+
+        Assert.Equal("SKU-1", product.Sku);
+    }
+
+    [Fact]
     public void ChangeStatus_Allows_Active_To_Defective()
     {
         var product = new Product("Phone", "SKU-1", 1, ProductStatus.Active);
