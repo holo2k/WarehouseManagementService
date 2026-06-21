@@ -1,8 +1,5 @@
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using WarehouseManagementService.Application.Common.Exceptions;
 using WarehouseManagementService.Application.Common.Interfaces;
 using WarehouseManagementService.Application.Common.Models;
 using WarehouseManagementService.Domain.Entities;
@@ -11,12 +8,20 @@ namespace WarehouseManagementService.Application.Products.Commands.CreateProduct
 
 public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductCommand, Result<ProductDto>>
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly IProductRepository _productRepository;
+    private readonly ICategoryRepository _categoryRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public CreateProductCommandHandler(IAppDbContext dbContext, IMapper mapper)
+    public CreateProductCommandHandler(
+        IProductRepository productRepository,
+        ICategoryRepository categoryRepository,
+        IUnitOfWork unitOfWork,
+        IMapper mapper)
     {
-        _dbContext = dbContext;
+        _productRepository = productRepository;
+        _categoryRepository = categoryRepository;
+        _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
 
@@ -26,32 +31,33 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
     {
         var productRequest = request.Request;
         var normalizedSku = productRequest.Sku.Trim();
-        var skuExists = await _dbContext.Products
-            .AnyAsync(product => product.Sku == normalizedSku, cancellationToken);
+        var skuExists = await _productRepository.ExistsBySkuAsync(normalizedSku, cancellationToken);
 
         if (skuExists)
         {
-            throw new ConflictException($"Product with SKU '{normalizedSku}' already exists.");
+            return Result.Failure<ProductDto>(
+                ErrorCodes.Conflict,
+                $"Product with SKU '{normalizedSku}' already exists.");
         }
 
-        var categoryExists = await _dbContext.Categories
-            .AnyAsync(category => category.Id == productRequest.CategoryId, cancellationToken);
+        var categoryExists = await _categoryRepository.ExistsByIdAsync(productRequest.CategoryId, cancellationToken);
 
         if (!categoryExists)
         {
-            throw new NotFoundException($"Category with id '{productRequest.CategoryId}' was not found.");
+            return Result.Failure<ProductDto>(
+                ErrorCodes.NotFound,
+                $"Category with id '{productRequest.CategoryId}' was not found.");
         }
 
         var product = new Product(productRequest.Name, normalizedSku, productRequest.CategoryId, productRequest.Status);
-        _dbContext.Products.Add(product);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _productRepository.Add(product);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var dto = await _dbContext.Products
-            .AsNoTracking()
-            .Where(createdProduct => createdProduct.Id == product.Id)
-            .ProjectTo<ProductDto>(_mapper.ConfigurationProvider)
-            .SingleAsync(cancellationToken);
+        var createdProduct = await _productRepository.GetByIdWithCategoryAsync(
+            product.Id,
+            trackChanges: false,
+            cancellationToken);
 
-        return Result<ProductDto>.Success(dto);
+        return Result.Success(_mapper.Map<ProductDto>(createdProduct ?? product));
     }
 }

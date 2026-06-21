@@ -4,7 +4,7 @@ using WarehouseManagementService.Domain.Entities;
 
 namespace WarehouseManagementService.Infrastructure.Persistence;
 
-public sealed class AppDbContext : DbContext, IAppDbContext
+public sealed class AppDbContext : DbContext, IUnitOfWork
 {
     public AppDbContext(DbContextOptions<AppDbContext> options)
         : base(options)

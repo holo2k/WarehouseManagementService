@@ -1,7 +1,5 @@
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
 using WarehouseManagementService.Application.Common.Interfaces;
 using WarehouseManagementService.Application.Common.Models;
 
@@ -9,12 +7,12 @@ namespace WarehouseManagementService.Application.Products.Queries.GetProducts;
 
 public sealed class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, Result<PagedResult<ProductDto>>>
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly IProductRepository _productRepository;
     private readonly IMapper _mapper;
 
-    public GetProductsQueryHandler(IAppDbContext dbContext, IMapper mapper)
+    public GetProductsQueryHandler(IProductRepository productRepository, IMapper mapper)
     {
-        _dbContext = dbContext;
+        _productRepository = productRepository;
         _mapper = mapper;
     }
 
@@ -22,32 +20,22 @@ public sealed class GetProductsQueryHandler : IRequestHandler<GetProductsQuery, 
         GetProductsQuery request,
         CancellationToken cancellationToken)
     {
-        var query = _dbContext.Products
-            .AsNoTracking()
-            .AsQueryable();
+        var totalCount = await _productRepository.CountAsync(
+            request.Status,
+            request.CategoryId,
+            cancellationToken);
 
-        if (request.Status.HasValue)
-        {
-            query = query.Where(product => product.Status == request.Status.Value);
-        }
+        var products = await _productRepository.GetPageAsync(
+            request.Status,
+            request.CategoryId,
+            request.Page,
+            request.PageSize,
+            cancellationToken);
+        var productDtos = _mapper.Map<IReadOnlyCollection<ProductDto>>(products);
 
-        if (request.CategoryId.HasValue)
-        {
-            query = query.Where(product => product.CategoryId == request.CategoryId.Value);
-        }
-
-        var totalCount = await query.CountAsync(cancellationToken);
-
-        var products = await query
-            .OrderBy(product => product.Id)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .ProjectTo<ProductDto>(_mapper.ConfigurationProvider)
-            .ToListAsync(cancellationToken);
-
-        return Result<PagedResult<ProductDto>>.Success(
+        return Result.Success(
             new PagedResult<ProductDto>(
-                products,
+                productDtos,
                 request.Page,
                 request.PageSize,
                 totalCount));

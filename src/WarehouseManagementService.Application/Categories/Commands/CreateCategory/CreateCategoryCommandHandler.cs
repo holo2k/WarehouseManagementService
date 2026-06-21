@@ -1,7 +1,5 @@
 using AutoMapper;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using WarehouseManagementService.Application.Common.Exceptions;
 using WarehouseManagementService.Application.Common.Interfaces;
 using WarehouseManagementService.Application.Common.Models;
 using WarehouseManagementService.Domain.Entities;
@@ -10,12 +8,17 @@ namespace WarehouseManagementService.Application.Categories.Commands.CreateCateg
 
 public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategoryCommand, Result<CategoryDto>>
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly ICategoryRepository _categoryRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public CreateCategoryCommandHandler(IAppDbContext dbContext, IMapper mapper)
+    public CreateCategoryCommandHandler(
+        ICategoryRepository categoryRepository,
+        IUnitOfWork unitOfWork,
+        IMapper mapper)
     {
-        _dbContext = dbContext;
+        _categoryRepository = categoryRepository;
+        _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
 
@@ -24,18 +27,19 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
         CancellationToken cancellationToken)
     {
         var normalizedName = request.Request.Name.Trim();
-        var exists = await _dbContext.Categories
-            .AnyAsync(category => category.Name == normalizedName, cancellationToken);
+        var exists = await _categoryRepository.ExistsByNameAsync(normalizedName, cancellationToken);
 
         if (exists)
         {
-            throw new ConflictException($"Category '{normalizedName}' already exists.");
+            return Result.Failure<CategoryDto>(
+                ErrorCodes.Conflict,
+                $"Category '{normalizedName}' already exists.");
         }
 
         var category = new Category(normalizedName);
-        _dbContext.Categories.Add(category);
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        _categoryRepository.Add(category);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<CategoryDto>.Success(_mapper.Map<CategoryDto>(category));
+        return Result.Success(_mapper.Map<CategoryDto>(category));
     }
 }

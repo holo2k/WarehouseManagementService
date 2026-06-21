@@ -44,15 +44,15 @@ public static class ApplicationBuilderExtensions
             var error = statusCode switch
             {
                 StatusCodes.Status404NotFound => new ErrorResponse(
-                    "not_found",
+                    ErrorCodes.NotFound,
                     "The requested resource was not found."),
 
                 StatusCodes.Status405MethodNotAllowed => new ErrorResponse(
-                    "method_not_allowed",
+                    ErrorCodes.MethodNotAllowed,
                     "The HTTP method is not allowed for this endpoint."),
 
                 _ => new ErrorResponse(
-                    "http_error",
+                    ErrorCodes.HttpError,
                     $"Request failed with HTTP status code {statusCode}.")
             };
 

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WarehouseManagementService.Application.Common.Interfaces;
 using WarehouseManagementService.Infrastructure.Persistence;
+using WarehouseManagementService.Infrastructure.Persistence.Repositories;
 
 namespace WarehouseManagementService.Infrastructure;
 
@@ -19,7 +20,9 @@ public static class DependencyInjection
                 connectionString,
                 npgsqlOptions => npgsqlOptions.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
 
-        services.AddScoped<IAppDbContext>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AppDbContext>());
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IProductRepository, ProductRepository>();
 
         return services;
     }

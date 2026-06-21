@@ -1,8 +1,5 @@
 using AutoMapper;
-using AutoMapper.QueryableExtensions;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using WarehouseManagementService.Application.Common.Exceptions;
 using WarehouseManagementService.Application.Common.Interfaces;
 using WarehouseManagementService.Application.Common.Models;
 
@@ -10,12 +7,12 @@ namespace WarehouseManagementService.Application.Products.Queries.GetProductById
 
 public sealed class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQuery, Result<ProductDto>>
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly IProductRepository _productRepository;
     private readonly IMapper _mapper;
 
-    public GetProductByIdQueryHandler(IAppDbContext dbContext, IMapper mapper)
+    public GetProductByIdQueryHandler(IProductRepository productRepository, IMapper mapper)
     {
-        _dbContext = dbContext;
+        _productRepository = productRepository;
         _mapper = mapper;
     }
 
@@ -23,17 +20,18 @@ public sealed class GetProductByIdQueryHandler : IRequestHandler<GetProductByIdQ
         GetProductByIdQuery request,
         CancellationToken cancellationToken)
     {
-        var product = await _dbContext.Products
-            .AsNoTracking()
-            .Where(product => product.Id == request.Id)
-            .ProjectTo<ProductDto>(_mapper.ConfigurationProvider)
-            .FirstOrDefaultAsync(cancellationToken);
+        var product = await _productRepository.GetByIdWithCategoryAsync(
+            request.Id,
+            trackChanges: false,
+            cancellationToken);
 
         if (product is null)
         {
-            throw new NotFoundException($"Product with id '{request.Id}' was not found.");
+            return Result.Failure<ProductDto>(
+                ErrorCodes.NotFound,
+                $"Product with id '{request.Id}' was not found.");
         }
 
-        return Result<ProductDto>.Success(product);
+        return Result.Success(_mapper.Map<ProductDto>(product));
     }
 }

@@ -81,6 +81,8 @@ Docker Compose не требует `.env`: имена сервисов, порт
 - MediatR
 - CQRS на уровне приложения
 - Result pattern
+- Repository pattern
+- Unit of Work
 - FluentValidation
 - Optimistic Concurrency — поле `status` настроено как concurrency token, чтобы параллельные изменения статуса не перетирали друг друга
 - Exception Handling Middleware — исключения автоматически преобразуются в JSON-ответы с корректным HTTP-статусом.
@@ -106,6 +108,7 @@ dotnet test WarehouseManagementService.slnx
 ## Использование Result
 
 В проекте используется единый формат ответа `ApiResponse<T>`.
+Application-слой возвращает результат операций через `Result.Success(...)` и `Result.Failure(...)`.
 
 Успешный ответ:
 
@@ -256,7 +259,8 @@ WarehouseManagementService
 │       ├── Persistence
 │       │   ├── Configurations
 │       │   ├── Initializer
-│       │   └── Migrations
+│       │   ├── Migrations
+│       │   └── Repositories
 │       └── DependencyInjection.cs
 └── tests
     └── WarehouseManagementService.Tests

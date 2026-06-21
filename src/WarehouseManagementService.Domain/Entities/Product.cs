@@ -28,6 +28,13 @@ public sealed class Product
 
     public ProductStatus Status { get; private set; }
 
+    public bool CanChangeStatus(ProductStatus newStatus)
+    {
+        return Status == newStatus
+            || Status == ProductStatus.Active && newStatus == ProductStatus.Defective
+            || Status == ProductStatus.Defective && newStatus == ProductStatus.WriteOff;
+    }
+
     public void ChangeStatus(ProductStatus newStatus)
     {
         if (Status == newStatus)
@@ -35,10 +42,7 @@ public sealed class Product
             return;
         }
 
-        var isAllowed = Status == ProductStatus.Active && newStatus == ProductStatus.Defective
-            || Status == ProductStatus.Defective && newStatus == ProductStatus.WriteOff;
-
-        if (!isAllowed)
+        if (!CanChangeStatus(newStatus))
         {
             throw new InvalidOperationException(
                 $"Status transition from {Status} to {newStatus} is not allowed.");

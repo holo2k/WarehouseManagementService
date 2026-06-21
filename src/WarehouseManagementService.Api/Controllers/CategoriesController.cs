@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using WarehouseManagementService.Api.Extensions;
 using WarehouseManagementService.Application.Categories;
 using WarehouseManagementService.Application.Categories.Commands.CreateCategory;
 using WarehouseManagementService.Application.Categories.Queries.GetCategories;
@@ -30,7 +31,7 @@ public sealed class CategoriesController : ControllerBase
     {
         var result = await _sender.Send(new GetCategoriesQuery(), cancellationToken);
 
-        return Ok(ApiResponse<IReadOnlyCollection<CategoryDto>>.Ok(result.Value));
+        return this.FromResult(result);
     }
 
     /// <summary>
@@ -41,14 +42,14 @@ public sealed class CategoriesController : ControllerBase
     /// <returns>Созданная категория.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<CategoryDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<ApiResponse<CategoryDto>>> Create(
         [FromBody] CreateCategoryRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new CreateCategoryCommand(request), cancellationToken);
 
-        return Created($"/api/categories/{result.Value.Id}", ApiResponse<CategoryDto>.Ok(result.Value));
+        return this.FromCreatedResult(result, category => $"/api/categories/{category.Id}");
     }
 }

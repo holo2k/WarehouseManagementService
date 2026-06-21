@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using WarehouseManagementService.Api.Extensions;
 using WarehouseManagementService.Application.Common.Models;
 using WarehouseManagementService.Application.Products;
 using WarehouseManagementService.Application.Products.Commands.ChangeProductStatus;
@@ -32,7 +33,7 @@ public sealed class ProductsController : ControllerBase
     /// <returns>Страница товаров.</returns>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<PagedResult<ProductDto>>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<ApiResponse<PagedResult<ProductDto>>>> GetAll(
         [FromQuery] ProductStatus? status,
         [FromQuery] int? categoryId,
@@ -44,7 +45,7 @@ public sealed class ProductsController : ControllerBase
             new GetProductsQuery(status, categoryId, page, pageSize),
             cancellationToken);
 
-        return Ok(ApiResponse<PagedResult<ProductDto>>.Ok(result.Value));
+        return this.FromResult(result);
     }
 
     /// <summary>
@@ -62,7 +63,7 @@ public sealed class ProductsController : ControllerBase
     {
         var result = await _sender.Send(new GetProductByIdQuery(id), cancellationToken);
 
-        return Ok(ApiResponse<ProductDto>.Ok(result.Value));
+        return this.FromResult(result);
     }
 
     /// <summary>
@@ -73,16 +74,16 @@ public sealed class ProductsController : ControllerBase
     /// <returns>Созданный товар.</returns>
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status201Created)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<ApiResponse<ProductDto>>> Create(
         [FromBody] CreateProductRequest request,
         CancellationToken cancellationToken)
     {
         var result = await _sender.Send(new CreateProductCommand(request), cancellationToken);
 
-        return CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, ApiResponse<ProductDto>.Ok(result.Value));
+        return this.FromCreatedAtActionResult(result, nameof(GetById), product => new { id = product.Id });
     }
 
     /// <summary>
@@ -98,7 +99,6 @@ public sealed class ProductsController : ControllerBase
     /// <returns>Товар с обновленным статусом.</returns>
     [HttpPatch("{id:int}/status")]
     [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status422UnprocessableEntity)]
@@ -111,6 +111,6 @@ public sealed class ProductsController : ControllerBase
             new ChangeProductStatusCommand(id, request),
             cancellationToken);
 
-        return Ok(ApiResponse<ProductDto>.Ok(result.Value));
+        return this.FromResult(result);
     }
 }

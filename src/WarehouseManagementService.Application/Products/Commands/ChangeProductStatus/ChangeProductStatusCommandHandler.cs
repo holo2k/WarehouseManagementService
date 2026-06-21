@@ -1,7 +1,5 @@
 using AutoMapper;
 using MediatR;
-using Microsoft.EntityFrameworkCore;
-using WarehouseManagementService.Application.Common.Exceptions;
 using WarehouseManagementService.Application.Common.Interfaces;
 using WarehouseManagementService.Application.Common.Models;
 
@@ -9,12 +7,17 @@ namespace WarehouseManagementService.Application.Products.Commands.ChangeProduct
 
 public sealed class ChangeProductStatusCommandHandler : IRequestHandler<ChangeProductStatusCommand, Result<ProductDto>>
 {
-    private readonly IAppDbContext _dbContext;
+    private readonly IProductRepository _productRepository;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
 
-    public ChangeProductStatusCommandHandler(IAppDbContext dbContext, IMapper mapper)
+    public ChangeProductStatusCommandHandler(
+        IProductRepository productRepository,
+        IUnitOfWork unitOfWork,
+        IMapper mapper)
     {
-        _dbContext = dbContext;
+        _productRepository = productRepository;
+        _unitOfWork = unitOfWork;
         _mapper = mapper;
     }
 
@@ -22,26 +25,28 @@ public sealed class ChangeProductStatusCommandHandler : IRequestHandler<ChangePr
         ChangeProductStatusCommand request,
         CancellationToken cancellationToken)
     {
-        var product = await _dbContext.Products
-            .Include(product => product.Category)
-            .FirstOrDefaultAsync(product => product.Id == request.Id, cancellationToken);
+        var product = await _productRepository.GetByIdWithCategoryAsync(
+            request.Id,
+            trackChanges: true,
+            cancellationToken);
 
         if (product is null)
         {
-            throw new NotFoundException($"Product with id '{request.Id}' was not found.");
+            return Result.Failure<ProductDto>(
+                ErrorCodes.NotFound,
+                $"Product with id '{request.Id}' was not found.");
         }
 
-        try
+        if (!product.CanChangeStatus(request.Request.Status))
         {
-            product.ChangeStatus(request.Request.Status);
-        }
-        catch (InvalidOperationException exception)
-        {
-            throw new DomainRuleException(exception.Message);
+            return Result.Failure<ProductDto>(
+                ErrorCodes.DomainRuleViolation,
+                $"Status transition from {product.Status} to {request.Request.Status} is not allowed.");
         }
 
-        await _dbContext.SaveChangesAsync(cancellationToken);
+        product.ChangeStatus(request.Request.Status);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return Result<ProductDto>.Success(_mapper.Map<ProductDto>(product));
+        return Result.Success(_mapper.Map<ProductDto>(product));
     }
 }

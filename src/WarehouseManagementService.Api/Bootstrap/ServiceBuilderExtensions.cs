@@ -35,9 +35,9 @@ public static class ServiceBuilderExtensions
                             .ToArray());
 
                 var response = ApiResponse<object>.Fail(
-                    new ErrorResponse("validation_error", "Validation failed.", errors));
+                    new ErrorResponse(ErrorCodes.Validation, "Validation failed.", errors));
 
-                return new BadRequestObjectResult(response);
+                return new UnprocessableEntityObjectResult(response);
             };
         });
 
