@@ -57,6 +57,7 @@ public sealed class ProductStatusTests
     [InlineData(ProductStatus.Defective, ProductStatus.WriteOff, true)]
     [InlineData(ProductStatus.WriteOff, ProductStatus.Active, false)]
     [InlineData(ProductStatus.Defective, ProductStatus.Active, false)]
+    [InlineData(ProductStatus.WriteOff, ProductStatus.Defective, false)]
     public void CanChangeStatus_Returns_Expected_Result(
         ProductStatus currentStatus,
         ProductStatus newStatus,
