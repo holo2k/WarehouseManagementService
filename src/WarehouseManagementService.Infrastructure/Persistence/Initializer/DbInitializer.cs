@@ -6,10 +6,15 @@ namespace WarehouseManagementService.Infrastructure.Persistence.Initializer;
 
 public static class DbInitializer
 {
-    public static async Task InitializeAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
+    public static async Task InitializeAsync(
+        AppDbContext dbContext,
+        CancellationToken cancellationToken = default)
     {
-        if (!dbContext.Database.IsRelational())
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+
+        if (env == "Testing")
         {
+            await dbContext.Database.EnsureDeletedAsync(cancellationToken);
             await dbContext.Database.EnsureCreatedAsync(cancellationToken);
         }
         else

@@ -13,12 +13,17 @@ public static class DependencyInjection
         this IServiceCollection services,
         IConfiguration configuration)
     {
+        
         var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
 
-        services.AddDbContext<AppDbContext>(options =>
+        if (env != "Testing")
+        {
+            services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(
                 connectionString,
                 npgsqlOptions => npgsqlOptions.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName)));
+        }
 
         services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<AppDbContext>());
         services.AddScoped<ICategoryRepository, CategoryRepository>();
