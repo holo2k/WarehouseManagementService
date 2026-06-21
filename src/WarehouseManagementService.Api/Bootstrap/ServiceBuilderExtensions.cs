@@ -24,14 +24,19 @@ public static class ServiceBuilderExtensions
         {
             options.InvalidModelStateResponseFactory = context =>
             {
-                var errors = context.ModelState
+                var errorEntries = context.ModelState
                     .Where(entry => entry.Value?.Errors.Count > 0)
+                    .ToArray();
+                var hasJsonPathErrors = errorEntries.Any(entry => entry.Key.StartsWith("$."));
+
+                var errors = errorEntries
+                    .Where(entry => !ShouldSkipRequestLevelError(entry.Key, hasJsonPathErrors))
+                    .GroupBy(entry => NormalizeModelStateKey(entry.Key))
                     .ToDictionary(
-                        entry => entry.Key,
-                        entry => entry.Value!.Errors
-                            .Select(error => string.IsNullOrWhiteSpace(error.ErrorMessage)
-                                ? "Invalid value."
-                                : error.ErrorMessage)
+                        group => group.Key,
+                        group => group.SelectMany(entry => entry.Value!.Errors)
+                            .Select(error => NormalizeModelStateErrorMessage(error.ErrorMessage))
+                            .Distinct()
                             .ToArray());
 
                 var response = ApiResponse<object>.Fail(
@@ -53,5 +58,40 @@ public static class ServiceBuilderExtensions
         services.AddInfrastructure(configuration);
 
         return services;
+    }
+
+    private static bool ShouldSkipRequestLevelError(string key, bool hasJsonPathErrors)
+    {
+        return hasJsonPathErrors
+            && string.Equals(key, "request", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeModelStateKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key) || key == "$")
+        {
+            return "request";
+        }
+
+        return key.StartsWith("$.", StringComparison.Ordinal)
+            ? key[2..]
+            : key;
+    }
+
+    private static string NormalizeModelStateErrorMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return "Invalid value.";
+        }
+
+        if (message.Contains("could not be converted", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Invalid value.";
+        }
+
+        return string.Equals(message, "The request field is required.", StringComparison.OrdinalIgnoreCase)
+            ? "Request body is required."
+            : message;
     }
 }

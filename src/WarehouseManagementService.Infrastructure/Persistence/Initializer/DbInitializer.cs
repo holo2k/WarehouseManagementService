@@ -8,7 +8,15 @@ public static class DbInitializer
 {
     public static async Task InitializeAsync(AppDbContext dbContext, CancellationToken cancellationToken = default)
     {
-        await dbContext.Database.MigrateAsync();
+        if (!dbContext.Database.IsRelational())
+        {
+            await dbContext.Database.EnsureCreatedAsync(cancellationToken);
+        }
+        else
+        {
+            await dbContext.Database.MigrateAsync(cancellationToken);
+        }
+
         await SeedData(dbContext, cancellationToken);
     }
 

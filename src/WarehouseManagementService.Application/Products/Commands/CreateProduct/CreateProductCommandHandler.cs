@@ -2,6 +2,7 @@ using AutoMapper;
 using MediatR;
 using WarehouseManagementService.Application.Common.Interfaces;
 using WarehouseManagementService.Application.Common.Models;
+using WarehouseManagementService.Domain.Enums;
 using WarehouseManagementService.Domain.Entities;
 
 namespace WarehouseManagementService.Application.Products.Commands.CreateProduct;
@@ -49,7 +50,8 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
                 $"Category with id '{productRequest.CategoryId}' was not found.");
         }
 
-        var product = new Product(productRequest.Name, normalizedSku, productRequest.CategoryId, productRequest.Status);
+        var status = ProductStatusParser.ParseOrDefault(productRequest.Status, ProductStatus.Active);
+        var product = new Product(productRequest.Name, normalizedSku, productRequest.CategoryId, status);
         _productRepository.Add(product);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

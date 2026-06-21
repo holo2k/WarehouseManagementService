@@ -37,14 +37,16 @@ public sealed class ChangeProductStatusCommandHandler : IRequestHandler<ChangePr
                 $"Product with id '{request.Id}' was not found.");
         }
 
-        if (!product.CanChangeStatus(request.Request.Status))
+        var status = ProductStatusParser.Parse(request.Request.Status);
+
+        if (!product.CanChangeStatus(status))
         {
             return Result.Failure<ProductDto>(
                 ErrorCodes.DomainRuleViolation,
-                $"Status transition from {product.Status} to {request.Request.Status} is not allowed.");
+                $"Status transition from {product.Status} to {status} is not allowed.");
         }
 
-        product.ChangeStatus(request.Request.Status);
+        product.ChangeStatus(status);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return Result.Success(_mapper.Map<ProductDto>(product));
